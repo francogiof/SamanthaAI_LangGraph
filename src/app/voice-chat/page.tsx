@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import './voicechat.css';
 
 export default function VoiceChat() {
   const [isListening, setIsListening] = useState(false);
@@ -87,25 +88,29 @@ export default function VoiceChat() {
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>🗣️ Voice Chat with LemonFox</h1>
-      <button
-        onClick={isListening ? stopListening : startListening}
-        style={{
-          background: isListening ? '#f87171' : '#4ade80',
-          color: 'white',
-          padding: '10px 20px',
-          borderRadius: '8px',
-          border: 'none',
-          fontSize: '16px',
-          cursor: 'pointer',
-          marginBottom: '1rem',
-        }}
-      >
-        {isListening ? '🛑 Stop Listening' : '🎙️ Start Listening'}
-      </button>
+    <div className="voicechat-container">
+      <h1>🗣️ Virtual Interviewer </h1>
+      <div className="participants">
+        <div className="user">
+          <div className={`avatar ${isListening ? 'talking' : 'idle'}`} />
+          <div className="label">You</div>
+        </div>
+        <div className="user">
+          <div className={`avatar ${assistantText.includes('🤖 AI:') ? 'talking' : 'idle'}`} />
+          <div className="label">LemonFox</div>
+        </div>
+      </div>
 
-      <pre style={{ whiteSpace: 'pre-wrap' }}>{assistantText}</pre>
+      <div className="cc">
+        <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{assistantText}</pre>
+      </div>
+
+      <div className="controls">
+        <button className="btn" onClick={isListening ? stopListening : startListening}>
+          {isListening ? '🛑 Stop Listening' : '🎙️ Start Listening'}
+        </button>
+      </div>
+
       <audio ref={audioRef} hidden />
     </div>
   );

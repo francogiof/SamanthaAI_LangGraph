@@ -1,0 +1,85 @@
+/* File: src/app/voice-chat/voicechat.css */
+
+.voicechat-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  font-family: 'Segoe UI', sans-serif;
+  background: #f4f4f8;
+  min-height: 100vh;
+}
+
+.participants {
+  display: flex;
+  gap: 4rem;
+  margin-bottom: 2rem;
+}
+
+.user {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #ddd;
+  transition: all 0.3s ease;
+}
+
+.avatar.idle {
+  background: #bbb;
+  box-shadow: 0 0 0px #ccc;
+}
+
+.avatar.talking {
+  background: #4caf50;
+  box-shadow: 0 0 15px 5px rgba(76, 175, 80, 0.6);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0px rgba(76, 175, 80, 0.6); }
+  50% { box-shadow: 0 0 20px rgba(76, 175, 80, 0.9); }
+  100% { box-shadow: 0 0 0px rgba(76, 175, 80, 0.6); }
+}
+
+.label {
+  margin-top: 0.5rem;
+  font-size: 1rem;
+}
+
+.cc {
+  background: #fff;
+  border: 1px solid #ccc;
+  padding: 1rem;
+  width: 60%;
+  min-height: 60px;
+  margin-bottom: 2rem;
+  font-size: 1.2rem;
+  border-radius: 0.5rem;
+}
+
+.controls {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn {
+  background-color: #00796b;
+  border: none;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  text-align: center;
+  text-decoration: none;
+  font-size: 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background-color: #004d40;
+}
