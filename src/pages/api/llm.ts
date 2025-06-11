@@ -1,22 +1,21 @@
-// src/pages/api/llm.ts
+// File: src/pages/api/llm.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.LEMONFOX_LLM_KEY,
-  baseURL: 'https://api.lemonfox.ai/v1',
-});
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { text } = req.body;
 
-  const completion = await openai.chat.completions.create({
-    model: 'llama-8b-chat',
-    messages: [
-      { role: 'system', content: 'You are a helpful assistant.' },
-      { role: 'user', content: text },
-    ],
-  });
+  try {
+    const backendRes = await fetch('http://localhost:8000/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
 
-  res.status(200).json({ text: completion.choices[0].message.content });
+    const data = await backendRes.json();
+
+    res.status(200).json({ text: data.text });
+  } catch (err) {
+    console.error('❌ Error forwarding to FastAPI backend:', err);
+    res.status(500).json({ text: 'Error calling local LLM backend.' });
+  }
 }

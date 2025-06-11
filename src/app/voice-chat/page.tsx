@@ -1,3 +1,4 @@
+/* File: src/app/voice-chat/page.tsx */
 'use client';
 
 import { useRef, useState } from 'react';
