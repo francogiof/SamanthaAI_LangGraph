@@ -4,11 +4,47 @@
 import { useRef, useState } from 'react';
 import './voicechat.css';
 
+interface TechAgentState {
+  lastQuestionId: number | null;
+  question: string | null;
+  finished: boolean;
+  message: string | null;
+}
+
 export default function VoiceChat() {
   const [isListening, setIsListening] = useState(false);
   const [assistantText, setAssistantText] = useState('');
+  const [techAgent, setTechAgent] = useState<TechAgentState>({
+    lastQuestionId: null,
+    question: null,
+    finished: false,
+    message: null,
+  });
+  const [interviewMode, setInterviewMode] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
   const recognitionRef = useRef<any>(null);
+
+  // New: Start interview with TechInterviewerAgent
+  const startTechInterview = async () => {
+    console.log('🟢 [TechInterview] Start button pressed');
+    setInterviewMode(true);
+    setAssistantText('');
+    const res = await fetch('http://localhost:8000/tech-interviewer/next', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answer: null, last_question_id: null, user_id: 1, requirement_id: 1 }),
+    });
+    const data = await res.json();
+    console.log('🟢 [TechInterview] First question response:', data);
+    setTechAgent({
+      lastQuestionId: data.question_id,
+      question: data.question,
+      finished: data.finished,
+      message: data.message,
+    });
+    if (data.question) setAssistantText(`🤖 Interviewer: ${data.question}`);
+    else if (data.message) setAssistantText(`🤖 Interviewer: ${data.message}`);
+  };
 
   const startListening = () => {
     console.log('🎤 Start Listening clicked');
@@ -41,33 +77,51 @@ export default function VoiceChat() {
     recognition.onresult = async (event: any) => {
       const transcript = event.results[0][0].transcript;
       console.log('🧍 You said:', transcript);
-      setAssistantText(`🧍 You: ${transcript}`);
+      setAssistantText(prev => `${prev}\n🧍 You: ${transcript}`);
 
-      try {
+      if (interviewMode && techAgent.lastQuestionId) {
+        // Send answer to tech-interviewer agent
+        const replyRes = await fetch('http://localhost:8000/tech-interviewer/next', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            answer: transcript,
+            last_question_id: techAgent.lastQuestionId,
+            user_id: 1,
+            requirement_id: 1,
+          }),
+        });
+        const reply = await replyRes.json();
+        setTechAgent({
+          lastQuestionId: reply.question_id,
+          question: reply.question,
+          finished: reply.finished,
+          message: reply.message,
+        });
+        if (reply.question) setAssistantText(prev => `${prev}\n🤖 Interviewer: ${reply.question}`);
+        else if (reply.message) setAssistantText(prev => `${prev}\n🤖 Interviewer: ${reply.message}`);
+      } else {
+        // ...existing LLM logic...
         const replyRes = await fetch('/api/llm', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: transcript }),
         });
-
         const reply = await replyRes.json();
-        console.log('🤖 LLM reply:', reply.text);
         setAssistantText(prev => `${prev}\n🤖 AI: ${reply.text}`);
+      }
 
-        const audioRes = await fetch('/api/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: reply.text }),
-        });
-
-        const audioBlob = await audioRes.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        if (audioRef.current) {
-          audioRef.current.src = audioUrl;
-          audioRef.current.play();
-        }
-      } catch (err) {
-        console.error('❌ Error calling LLM or TTS:', err);
+      // ...existing TTS logic...
+      const audioRes = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: interviewMode && techAgent.question ? techAgent.question : transcript }),
+      });
+      const audioBlob = await audioRes.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      if (audioRef.current) {
+        audioRef.current.src = audioUrl;
+        audioRef.current.play();
       }
     };
 
@@ -97,21 +151,21 @@ export default function VoiceChat() {
           <div className="label">You</div>
         </div>
         <div className="user">
-          <div className={`avatar ${assistantText.includes('🤖 AI:') ? 'talking' : 'idle'}`} />
+          <div className={`avatar ${assistantText.includes('🤖') ? 'talking' : 'idle'}`} />
           <div className="label">LemonFox</div>
         </div>
       </div>
-
       <div className="cc">
         <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{assistantText}</pre>
       </div>
-
       <div className="controls">
         <button className="btn" onClick={isListening ? stopListening : startListening}>
           {isListening ? '🛑 Stop Listening' : '🎙️ Start Listening'}
         </button>
+        <button className="btn" onClick={startTechInterview} disabled={interviewMode}>
+          🧑‍💻 Start Tech Interview
+        </button>
       </div>
-
       <audio ref={audioRef} hidden />
     </div>
   );
