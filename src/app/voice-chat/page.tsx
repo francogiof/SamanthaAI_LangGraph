@@ -44,6 +44,34 @@ export default function VoiceChat() {
     });
     if (data.question) setAssistantText(`🤖 Interviewer: ${data.question}`);
     else if (data.message) setAssistantText(`🤖 Interviewer: ${data.message}`);
+
+    // TTS: Speak the first question or message immediately
+    let ttsText = '';
+    if (data.question) {
+      ttsText = data.question;
+    } else if (data.message) {
+      ttsText = data.message;
+    }
+    if (ttsText) {
+      try {
+        const audioRes = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: ttsText }),
+        });
+        if (!audioRes.ok) {
+          throw new Error('TTS API error');
+        }
+        const audioBlob = await audioRes.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        if (audioRef.current) {
+          audioRef.current.src = audioUrl;
+          await audioRef.current.play();
+        }
+      } catch (err) {
+        console.error('❌ Error playing TTS audio (first question):', err);
+      }
+    }
   };
 
   const startListening = () => {
@@ -100,6 +128,39 @@ export default function VoiceChat() {
         });
         if (reply.question) setAssistantText(prev => `${prev}\n🤖 Interviewer: ${reply.question}`);
         else if (reply.message) setAssistantText(prev => `${prev}\n🤖 Interviewer: ${reply.message}`);
+
+        // TTS: Speak the new question or message immediately after receiving it
+        let ttsText = '';
+        if (reply.question) {
+          ttsText = reply.question;
+        } else if (reply.message) {
+          ttsText = reply.message;
+        }
+        if (ttsText) {
+          try {
+            // Stop any currently playing audio before playing new one
+            if (audioRef.current) {
+              audioRef.current.pause();
+              audioRef.current.currentTime = 0;
+            }
+            const audioRes = await fetch('/api/tts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: ttsText }),
+            });
+            if (!audioRes.ok) {
+              throw new Error('TTS API error');
+            }
+            const audioBlob = await audioRes.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            if (audioRef.current) {
+              audioRef.current.src = audioUrl;
+              await audioRef.current.play();
+            }
+          } catch (err) {
+            console.error('❌ Error playing TTS audio (question):', err);
+          }
+        }
       } else {
         // ...existing LLM logic...
         const replyRes = await fetch('/api/llm', {
@@ -109,19 +170,30 @@ export default function VoiceChat() {
         });
         const reply = await replyRes.json();
         setAssistantText(prev => `${prev}\n🤖 AI: ${reply.text}`);
-      }
-
-      // ...existing TTS logic...
-      const audioRes = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: interviewMode && techAgent.question ? techAgent.question : transcript }),
-      });
-      const audioBlob = await audioRes.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      if (audioRef.current) {
-        audioRef.current.src = audioUrl;
-        audioRef.current.play();
+        // TTS for generic LLM response
+        let ttsText = reply.text;
+        try {
+          if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+          }
+          const audioRes = await fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: ttsText }),
+          });
+          if (!audioRes.ok) {
+            throw new Error('TTS API error');
+          }
+          const audioBlob = await audioRes.blob();
+          const audioUrl = URL.createObjectURL(audioBlob);
+          if (audioRef.current) {
+            audioRef.current.src = audioUrl;
+            await audioRef.current.play();
+          }
+        } catch (err) {
+          console.error('❌ Error playing TTS audio:', err);
+        }
       }
     };
 
